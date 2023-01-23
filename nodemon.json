@@ -1,0 +1,18 @@
+{
+  "name": "test-nodemon",
+  "version": "1.0.0",
+  "description": "",
+  "nodemonConfig": {
+    "watch": [
+      "server"
+    ],
+    "ext": "ts",
+    "ignore": [
+      "*.test.ts"
+    ],
+    "delay": "3",
+    "execMap": {
+      "ts": "ts-node"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "zap-gpt",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "nodemon --delay 1000ms index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.0.3",
+    "nodemon": "^2.0.20",
+    "openai": "^3.1.0",
+    "venom-bot": "^4.3.7"
+  },
+  "devDependencies": {
+    "forever": "^4.0.3"
+  }
+}
