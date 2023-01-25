@@ -4,7 +4,7 @@
 Clone this project with the code below:
 
 ```bash
-git clone https://github.com/VictorMonteiro7/zap-gpt.git
+$ git clone https://github.com/VictorMonteiro7/zap-gpt.git
 ```
 --- 
 
@@ -36,9 +36,27 @@ After this, run the project with `npm start`
 ```bash
 $ npm start
 ```
+---
 
+### Features
+
+- **/chatbot \<text\>**
+  - Use the above command to ask something, and the bot will return a reply. E.g.:
+    > */chatbot How do I make a cake?*
+- **/imgbot \<description\>**
+  - Use the above command to generate a DALL-E image. E.g.:
+    > */imgbot generate a cake image*
+- **/stickerbot**
+  - The above command work in two ways:
+    - With a image in whatsapp and with only the command as a description. E.g.: 
+    > (image)  
+    > */stickerbot*
+  - With a URL (the best way). e.g.:
+    > */stickerbot https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Pound_layer_cake.jpg/800px-Pound_layer_cake.jpg*
 
 ---
+
+# DO NOT USE THIS BOT TO ASK WRONG THINGS!
 
 You can check the origin guide into this link
 [Origin guide](https://www.tabnews.com.br/victorharry/guia-completo-de-como-integrar-o-chat-gpt-com-whatsapp)
