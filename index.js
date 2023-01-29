@@ -117,18 +117,14 @@ const commands = async (client, message) => {
       }
       break;
     case iaCommands.sticker:
-      client.sendText(messageTo, '🤖 Aguarde uns instantes...\nEstamos gerando o sticker....' );
       let loading = true;
       try {
+        client.sendText(messageTo, '🤖 Aguarde uns instantes...\nEstamos gerando o sticker....' );
         if (message.type === 'image') {
           const base64 = message.mediaData.preview._b64;
           client.sendImageAsSticker(messageTo, base64);
         } else if (message.type === 'video') {
-          const videoBase64 = message.mediaData.preview._b64;
-          const response = await client.sendImageAsStickerGif(messageTo, videoBase64);
-          if (!response) {
-            client.sendText(messageTo, '❌ Erro ao gerar o sticker, no momento só é possível gerar stickers de imagens');
-          }
+          client.sendText(messageTo, '❌ Erro ao gerar o sticker, no momento só é possível gerar stickers de imagens, url ou textos');
         } else {
           let text = message.text.substring(message.text.indexOf(" "));
           const regexIsUrl = /https?:\/\/\S+/g;
@@ -148,7 +144,7 @@ const commands = async (client, message) => {
             const gifArr = response?.data?.results;
             for (let i = 0; i < gifArr.length && loading; i++) {
               const gif = gifArr[i];
-              const gifUrl = gif?.media_formats?.gif?.url;
+              const gifUrl = gif?.media_formats?.tinygif?.url;
               if (gifUrl) {
                 const url = new URL(gifUrl);
                 const clearUrl = url.toString().replace(url.search, '');
