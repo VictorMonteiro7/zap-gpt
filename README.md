@@ -16,12 +16,15 @@ $ git clone https://github.com/VictorMonteiro7/zap-gpt.git
 > Organization ID (Open-AI)
 - Click on [this link](https://beta.openai.com/account/org-settings), select your organization and get the Organization ID.
 
+> Tenor API Key  
+- Follow the instructions to generate a [TENOR API KEY here](https://developers.google.com/tenor/guides/quickstart)
+
 Copy the `env.local` file to the root folder, and rename it to `.env`.
 
 ```bash
 $ cp <PATH>/.env.local .env 
 ```
-After this, put the KEY, Organization ID and your numb on the variables. 
+After this, put the KEY, Organization ID, your tel number and the TENOR API KEY on the variables. 
 
 ---  
 ### How to run the project?
@@ -51,8 +54,10 @@ $ npm start
     - With a image in whatsapp and with only the command as a description. E.g.: 
     > (image)  
     > */stickerbot*
-  - With a URL (the best way). E.g.:
+  - With a URL. E.g.:
     > */stickerbot https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Pound_layer_cake.jpg/800px-Pound_layer_cake.jpg*
+  - With key words. E.g.:
+    > */stickerbot choco cake*
 - **/imgvarbot**
   - The above command works like the _/stickerbot_ command, and will generate a new variant of the image. E.g (w/ url): 
     > */imgvarbot https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Pound_layer_cake.jpg/800px-Pound_layer_cake.jpg*

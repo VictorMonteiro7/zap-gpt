@@ -3,6 +3,7 @@ import * as dotenv from 'dotenv'
 import { Configuration, OpenAIApi } from 'openai'
 import axios from 'axios';
 import sharp from 'sharp';
+import path from 'node:path';
 
 dotenv.config();
 
@@ -81,18 +82,14 @@ const commands = async (client, message) => {
     case iaCommands.davinci3:
       client.sendText(messageTo, '🤖 Aguarde uns instantes...\nEstamos gerando o texto....' );
       const question = message.text.substring(message.text.indexOf(" "));
-      getDavinciResponse(question).then((response) => {
+      try {
+        const response = await getDavinciResponse(question)
         const responseText = `Texto gerado pela IA GPT-3 🤖\n\nSolicitado por: ${message.sender?.pushname}\n\nTexto da pergunta: ${question}\n\nTexto da resposta: ${response}`;
-        client.sendText(messageTo, responseText)
-          .then((r)=> {
-            // silently ignore
-          })
-          .catch((e) => {
-            client.sendText(messageTo, '❌ Ocorreu um problema ao gerar a sua solicitação. Por favor, tente novamente.');
-          });
-      }).catch((e) => {
-        // silently ignore
-      });
+        client.sendText(messageTo, responseText);
+      } catch (err) {
+        // catch
+        client.sendText(messageTo, '❌ Ocorreu um problema ao gerar a sua solicitação. Por favor, tente novamente.');
+      }
       break;
     case iaCommands.dalle:
       client.sendText(messageTo, '🤖 Aguarde uns instantes...\nEstamos gerando a imagem....' );
@@ -107,60 +104,69 @@ const commands = async (client, message) => {
         sizeImg = "1024x1024";
       }
       imgDescription = imgDescription.replace(sizeImg, '').trim();
-      getDalleResponse(imgDescription, sizeImg).then((imgUrl) => {
-        client.sendImage(
+      try {
+        const imgUrl = await getDalleResponse(imgDescription, sizeImg);
+        await client.sendImage(
           messageTo,
           imgUrl,
           imgDescription,
           `Imagem gerada pela IA DALL-E 🤖\n\nSolicitado por: ${message.sender?.pushname}\n\nTexto da descrição: ${imgDescription}`
-        ).then((r) => {
-          // silently ignore
-        })
-        .catch((e) => {
-          console.log(e);
-          client.sendText(messageTo, '❌ Sua solicitação foi rejeitada, por conta de palavras impróprias ou ofensivas.')
-        });
-      }).catch((e) => {
-        // silently ignore
-      });
+        );
+      } catch (err) {
+        client.sendText(messageTo, '❌ Sua solicitação foi rejeitada, por conta de palavras impróprias ou ofensivas.');
+      }
       break;
     case iaCommands.sticker:
       client.sendText(messageTo, '🤖 Aguarde uns instantes...\nEstamos gerando o sticker....' );
-      if (message.type === 'image') {
-        const stickerBase64 = message.mediaData.preview._b64;
-        const base64 = `data:${message.mediaData.mimetype};base64,${stickerBase64}`;
-        client.sendImageAsSticker(messageTo, base64);
-      } else if (message.type === 'video') {
-        const videoBase64 = message.mediaData.preview._b64;
-        client.sendImageAsStickerGif(messageTo, videoBase64)
-          .then((response) => {
-            if (!response) {
-              client.sendText(messageTo, '❌ Erro ao gerar o sticker, no momento só é possível gerar stickers de imagens');
-            }
-          })
-          .catch((e) => {
-            client.sendText(messageTo, '❌ Erro ao gerar o sticker, verifique se o link está correto.');
-          });
-      } else {
-        const url = message.text.substring(message.text.indexOf(" "));
-        try {
-          const initWithData = /^data:/;
-          if (initWithData.test(url)) {
-            client.sendImageAsSticker(messageTo, url);
-          } else {
-            const { data } = await axios.get(url, {responseType: 'arraybuffer'});
-            const base64 = Buffer.from(data).toString('base64');
-            client.sendImageAsSticker(messageTo, base64)
-            .then((response) => {
-              // silently ignore
-            })
-            .catch((e) => {
-              client.sendText(messageTo, '❌ Erro ao gerar o sticker, verifique se o link está correto.');
-            });
+      let loading = true;
+      try {
+        if (message.type === 'image') {
+          const base64 = message.mediaData.preview._b64;
+          client.sendImageAsSticker(messageTo, base64);
+        } else if (message.type === 'video') {
+          const videoBase64 = message.mediaData.preview._b64;
+          const response = await client.sendImageAsStickerGif(messageTo, videoBase64);
+          if (!response) {
+            client.sendText(messageTo, '❌ Erro ao gerar o sticker, no momento só é possível gerar stickers de imagens');
           }
-        } catch (e) {
-          console.log('ERROR', e);
+        } else {
+          let text = message.text.substring(message.text.indexOf(" "));
+          const regexIsUrl = /https?:\/\/\S+/g;
+          if (regexIsUrl.test(text)) {
+            const url = new URL(text);
+            const clearUrl = url.toString().replace(url.search, '');
+            const extName = path.extname(clearUrl);
+            if (extName === '.gif') {
+              await client.sendImageAsStickerGif(messageTo, clearUrl);
+            } else {
+              await client.sendImageAsSticker(messageTo, url);
+            }
+          } else {
+            text = deleteUrlInText(text);
+            const tenorUrl = `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(text)}&key=${process.env.TENOR_API_KEY}&limit=8`
+            const response = await axios.get(tenorUrl);
+            const gifArr = response?.data?.results;
+            for (let i = 0; i < gifArr.length && loading; i++) {
+              const gif = gifArr[i];
+              const gifUrl = gif?.media_formats?.gif?.url;
+              if (gifUrl) {
+                const url = new URL(gifUrl);
+                const clearUrl = url.toString().replace(url.search, '');
+                try {
+                  await client.sendImageAsStickerGif(messageTo, clearUrl);
+                  loading = false;
+                } catch (err) {
+                  // silently fail
+                }
+              }
+            };
+          }
         }
+      } catch (err) {
+        console.log(err)
+        client.sendText(messageTo, '❌ Erro ao gerar o sticker, verifique se o link está correto.');
+      } finally {
+        loading = false;
       }
       break;
     case iaCommands.variation:
@@ -232,4 +238,9 @@ async function generateBufferImage({ base64, sizeImg, client, message, messageTo
         client.sendText(messageTo, '❌ Erro ao gerar a imagem, verifique se o link está correto.');
       }
     });
+}
+
+function deleteUrlInText(text) {
+  const regexIsUrl = /https?:\/\/\S+/g;
+  return text.replace(regexIsUrl, '');
 }
