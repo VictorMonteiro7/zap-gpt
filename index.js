@@ -2,6 +2,7 @@ import { create } from 'venom-bot'
 import * as dotenv from 'dotenv'
 import { Configuration, OpenAIApi } from 'openai'
 import axios from 'axios';
+import sharp from 'sharp';
 
 dotenv.config();
 
@@ -25,7 +26,7 @@ const getDavinciResponse = async (clientText) => {
   const options = {
     model: "text-davinci-003", // Modelo GPT a ser usado
     prompt: clientText, // Texto enviado pelo usuário
-    temperature: 1, // Nível de variação das respostas geradas, 1 é o máximo
+    temperature: 0.9, // Nível de variação das respostas geradas, 1 é o máximo
     max_tokens: 4000 // Quantidade de tokens (palavras) a serem retornadas pelo bot, 4000 é o máximo
   }
 
@@ -56,11 +57,21 @@ const getDalleResponse = async (clientText, sizeImg) => {
   }
 }
 
+const dallEVariation = async function (url, sizeImg) {
+  try {
+    const res = await openai.createImageVariation(url, 1, sizeImg || "1024x1024");
+    return res;
+  } catch (err) {
+    return `❌ OpenAI Response Error: ${err}`;
+  }
+}
+
 const commands = async (client, message) => {
   const iaCommands = {
     davinci3: "/chatbot",
     dalle: "/imgbot",
     sticker: "/stickerbot",
+    variation: '/imgvarbot',
   }
 
   let firstWord = message.type === 'image' || message.type === 'video' ? message.text : message.text?.substring(0, message.text.indexOf(" "));
@@ -68,10 +79,11 @@ const commands = async (client, message) => {
   const messageTo = message.from === process.env.PHONE_NUMBER ? message.to : message.from;
   switch (firstWord?.trim().toLowerCase()) {
     case iaCommands.davinci3:
-      client.sendText(messageTo, 'Aguarde uns instantes...\nEstamos gerando o texto....' );
+      client.sendText(messageTo, '🤖 Aguarde uns instantes...\nEstamos gerando o texto....' );
       const question = message.text.substring(message.text.indexOf(" "));
       getDavinciResponse(question).then((response) => {
-        client.sendText(messageTo, response)
+        const responseText = `Texto gerado pela IA GPT-3 🤖\n\nSolicitado por: ${message.sender?.pushname}\n\nTexto da pergunta: ${question}\n\nTexto da resposta: ${response}`;
+        client.sendText(messageTo, responseText)
           .then((r)=> {
             // silently ignore
           })
@@ -83,14 +95,14 @@ const commands = async (client, message) => {
       });
       break;
     case iaCommands.dalle:
-      client.sendText(messageTo, 'Aguarde uns instantes...\nEstamos gerando a imagem....' );
+      client.sendText(messageTo, '🤖 Aguarde uns instantes...\nEstamos gerando a imagem....' );
       let imgDescription = message.text.substring(message.text.indexOf(" "));
       const regexToGetSize = /\d{3,4}x\d{3,4}/g;
-      let sizeImg = imgDescription.match(regexToGetSize)?.[0];
+      let sizeImg = imgDescription.match(regexToGetSize);
       const allowedSizes = ["256x256", "512x512", "1024x1024"];
-      if (allowedSizes.includes(sizeImg)) {
-        sizeImg = sizeImg;
-      } else {
+      if (sizeImg?.length && allowedSizes.includes(sizeImg[0])) {
+        sizeImg = sizeImg[0];
+      } else if (sizeImg?.length) {
         client.sendText(messageTo, '❗O tamanho da imagem não é permitido, e trocamos para o tamanho padrão de 1024x1024.');
         sizeImg = "1024x1024";
       }
@@ -113,7 +125,7 @@ const commands = async (client, message) => {
       });
       break;
     case iaCommands.sticker:
-      client.sendText(messageTo, 'Aguarde uns instantes...\nEstamos gerando o sticker....' );
+      client.sendText(messageTo, '🤖 Aguarde uns instantes...\nEstamos gerando o sticker....' );
       if (message.type === 'image') {
         const stickerBase64 = message.mediaData.preview._b64;
         const base64 = `data:${message.mediaData.mimetype};base64,${stickerBase64}`;
@@ -151,9 +163,73 @@ const commands = async (client, message) => {
         }
       }
       break;
+    case iaCommands.variation:
+      client.sendText(messageTo, '🤖 Aguarde uns instantes...\nEstamos gerando a imagem....' );
+      const options = {
+        base64: null, // set into if/else
+        sizeImg: "1024x1024", // set into if/else or use default
+        client,
+        message,
+        messageTo,
+      };
+      if (message.type === 'image') {
+        options.base64 = message.mediaData.preview._b64;
+        let imgDescription = message.text.substring(message.text.indexOf(" "));
+        const regexToGetSize = /\d{3,4}x\d{3,4}/g;
+        let sizeImg = imgDescription.match(regexToGetSize);
+        const allowedSizes = ["256x256", "512x512", "1024x1024"];
+        if (sizeImg?.length && allowedSizes.includes(sizeImg[0])) {
+          options.sizeImg = sizeImg[0];
+        } else if (sizeImg?.length) {
+          client.sendText(messageTo, '❗O tamanho da imagem não é permitido, e trocamos para o tamanho padrão de 1024x1024.');
+          options.sizeImg = "1024x1024";
+        }
+        imgDescription = imgDescription.replace(sizeImg, '').trim();
+        await generateBufferImage(options);
+      } else {
+        const url = message.text.substring(message.text.indexOf(" "));
+        const { data } = await axios.get(url, {responseType: 'arraybuffer'});
+        options.base64 = Buffer.from(data).toString('base64');
+        generateBufferImage(options);
+      }
   }
 }
 
 async function start(client) {
   client.onAnyMessage((message) => commands(client, message));
+}
+
+
+async function generateBufferImage({ base64, sizeImg, client, message, messageTo }) {
+  const buffer = Buffer.from(base64, 'base64');
+  client.sendText(messageTo, '🤖 Transformando imagem...')
+  const randonName = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  const imgName = `${randonName}.png`;
+  sharp(buffer)
+    .resize(1024, 1024, {
+      fit: 'contain',
+    })
+    .png()
+    .toBuffer(async (err, data, info) => {
+      if (err) {
+        client.sendText(messageTo, '❌ Erro ao gerar a imagem, verifique se o link está correto.');
+        return null;
+      }
+
+      data.name = imgName;
+
+      try {
+        client.sendText(messageTo, '🤖 Só mais um pouquinho...' );
+        const r = await dallEVariation(data, sizeImg);
+        client.sendText(messageTo, '🤖 Quase lá...');
+        await client.sendImage(
+          messageTo,
+          r.data.data[0].url,
+          'Imagem gerada pela IA OpenAI',
+          `Imagem gerada pela IA OpenAI 🤖\n\nSolicitado por: ${message.sender?.pushname}`
+        );
+      } catch (e) {
+        client.sendText(messageTo, '❌ Erro ao gerar a imagem, verifique se o link está correto.');
+      }
+    });
 }
