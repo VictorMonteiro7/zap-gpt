@@ -51,8 +51,11 @@ $ npm start
     - With a image in whatsapp and with only the command as a description. E.g.: 
     > (image)  
     > */stickerbot*
-  - With a URL (the best way). e.g.:
+  - With a URL (the best way). E.g.:
     > */stickerbot https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Pound_layer_cake.jpg/800px-Pound_layer_cake.jpg*
+- **/imgvarbot**
+  - The above command works like the _/stickerbot_ command, and will generate a new variant of the image. E.g (w/ url): 
+    > */imgvarbot https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Pound_layer_cake.jpg/800px-Pound_layer_cake.jpg*
 
 ---
 
